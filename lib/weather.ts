@@ -1,4 +1,4 @@
-import type { LocationResult, WeatherDay } from "./types";
+import type { LocationResult, LocationSuggestion, WeatherDay } from "./types";
 
 const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
@@ -28,12 +28,28 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 }
 
-export async function geocodeLocation(query: string): Promise<LocationResult> {
-  const params = new URLSearchParams({ name: query, count: "5", language: "en", format: "json" });
+export async function searchLocations(query: string, count = 6): Promise<LocationSuggestion[]> {
+  const params = new URLSearchParams({ name: query, count: String(count), language: "en", format: "json" });
   const data = (await fetchJson(`${GEO_URL}?${params}`)) as { results?: Array<Record<string, unknown>> };
-  const results = data.results ?? [];
+  return (data.results ?? []).flatMap((result) => {
+    if (typeof result.latitude !== "number" || typeof result.longitude !== "number" || typeof result.name !== "string") return [];
+    return [{
+      id: typeof result.id === "number" ? result.id : undefined,
+      name: result.name,
+      country: String(result.country ?? ""),
+      countryCode: typeof result.country_code === "string" ? result.country_code : undefined,
+      admin1: typeof result.admin1 === "string" ? result.admin1 : undefined,
+      latitude: result.latitude,
+      longitude: result.longitude,
+      timezone: typeof result.timezone === "string" ? result.timezone : undefined,
+    }];
+  });
+}
+
+export async function geocodeLocation(query: string): Promise<LocationResult> {
+  const results = await searchLocations(query, 5);
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const exactMatches = results.filter((result) => String(result.name ?? "").trim().toLocaleLowerCase() === normalizedQuery);
+  const exactMatches = results.filter((result) => result.name.trim().toLocaleLowerCase() === normalizedQuery);
   if (exactMatches.length > 1) {
     throw new WeatherProviderError("LOCATION_AMBIGUOUS", `“${query}” matches several places. Try adding a state or country.`);
   }
@@ -42,8 +58,10 @@ export async function geocodeLocation(query: string): Promise<LocationResult> {
     throw new WeatherProviderError("LOCATION_NOT_FOUND", `We couldn't find a forecast for “${query}”. Try a nearby city.`);
   }
   return {
+    id: result.id,
     name: String(result.name),
     country: String(result.country ?? ""),
+    countryCode: result.countryCode,
     admin1: typeof result.admin1 === "string" ? result.admin1 : undefined,
     latitude: result.latitude,
     longitude: result.longitude,

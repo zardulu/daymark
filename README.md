@@ -30,6 +30,12 @@ The app has no database, authentication, LLM, or separate backend service. Forec
 
 ## API
 
+The location field uses a server-side suggestion endpoint:
+
+`GET /api/locations?q=por`
+
+It returns up to six normalized matches from Open-Meteo Geocoding. The client debounces searches, supports keyboard navigation, and submits the selected city with its administrative area and country to the suitability endpoint.
+
 `POST /api/suitability`
 
 Request:

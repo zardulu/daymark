@@ -12,13 +12,17 @@ export type SuitabilityRequest = {
 };
 
 export type LocationResult = {
+  id?: number;
   name: string;
   country: string;
+  countryCode?: string;
   admin1?: string;
   latitude: number;
   longitude: number;
   timezone?: string;
 };
+
+export type LocationSuggestion = LocationResult;
 
 export type WeatherDay = {
   date: string;

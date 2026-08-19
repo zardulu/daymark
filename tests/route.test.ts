@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GET } from "@/app/api/locations/route";
 import { POST } from "@/app/api/suitability/route";
 
 function response(data: unknown, ok = true, status = 200) {
@@ -19,6 +20,35 @@ const forecast = {
     sunset: ["2026-08-20T19:00", "2026-08-21T18:59"],
   },
 };
+
+describe("GET /api/locations", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("returns normalized location suggestions", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(response({ results: [
+      { id: 1, name: "Portland", country: "United States", country_code: "US", admin1: "Oregon", latitude: 45.5, longitude: -122.6, timezone: "America/Los_Angeles" },
+    ] })));
+    const result = await GET(new Request("http://localhost/api/locations?q=por"));
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ locations: [expect.objectContaining({ name: "Portland", admin1: "Oregon", countryCode: "US" })] });
+  });
+
+  it("does not call the provider for a too-short query", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await GET(new Request("http://localhost/api/locations?q=p"));
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ locations: [] });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a stable error when the geocoder fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(response({}, false, 503)));
+    const result = await GET(new Request("http://localhost/api/locations?q=par"));
+    expect(result.status).toBe(502);
+    expect((await result.json()).error.code).toBe("UPSTREAM_ERROR");
+  });
+});
 
 describe("POST /api/suitability", () => {
   beforeEach(() => vi.restoreAllMocks());
