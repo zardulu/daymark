@@ -247,11 +247,11 @@ function Results({ report }: { report: SuitabilityReport }) {
       <div className="day-list">{report.days.map((day, index) => <DayRow key={day.date} day={day} best={day.date === report.bestDay.date} index={index} />)}</div>
       <section className="methodology" id="methodology" aria-label="How the score works">
         <p className="eyebrow"><span className="eyebrow-line" /> HOW THE SCORE WORKS</p>
-        <p>Every day starts at 100. We subtract points when the forecast crosses an activity-specific threshold, then label the result: Excellent (80+), Good (60–79), Fair (40–59), or Poor (below 40).</p>
+        <p>Daymark scores each date from 0–100. It combines the full daylight forecast (40%) with the strongest two-hour window (60%), then applies activity-specific adjustments for rain timing, sky conditions, temperature, wind, and UV. Penalties are graduated, so mild conditions have a small effect while severe conditions have a larger one. Forecasts farther out receive a small confidence adjustment. Excellent is 90+, Good is 70–89, Fair is 45–69, and Poor is below 45.</p>
         <div className="method-grid">
-          <div><strong>Rain &amp; weather codes</strong><span>Probability, amount, drizzle, showers, snow, and thunderstorms.</span></div>
-          <div><strong>Comfort</strong><span>Temperature range, wind speed, and UV exposure.</span></div>
-          <div><strong>Recommendation</strong><span>The highest score wins; ties go to the earliest day.</span></div>
+          <div><strong>Rain &amp; weather codes</strong><span>Daylight rain timing, weather type, drizzle, showers, snow, and thunderstorms.</span></div>
+          <div><strong>Comfort</strong><span>Temperature, wind, and UV change the score gradually rather than at one hard cutoff.</span></div>
+          <div><strong>Recommendation</strong><span>The highest score wins; ties go to the earliest day. Farther-out forecasts receive a small confidence adjustment.</span></div>
         </div>
       </section>
     </section>
