@@ -1,8 +1,10 @@
 import type {
   Activity,
+  BestTimeSuggestion,
   SuitabilityDay,
   SuitabilityLabel,
   WeatherDay,
+  WeatherHour,
 } from "./types";
 
 type Rule = { when: (day: WeatherDay) => boolean; penalty: number; reason: string };
@@ -35,6 +37,9 @@ const WEATHER_NAMES: Record<number, string> = {
 
 const RULES: Record<Activity, Rule[]> = {
   hiking: [
+    { when: (d) => d.weatherCode === 3, penalty: 2, reason: "Overcast conditions" },
+    { when: (d) => d.precipitationProbability > 10 && d.precipitationProbability <= 40, penalty: 2, reason: "Some rain uncertainty" },
+    { when: (d) => d.windSpeed > 12 && d.windSpeed <= 30, penalty: 2, reason: "Moderate wind" },
     { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 10, reason: "Drizzle risk" },
     { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 20, reason: "Wet trail conditions" },
     { when: (d) => d.precipitationProbability > 40, penalty: 20, reason: "Rain is likely" },
@@ -46,6 +51,9 @@ const RULES: Record<Activity, Rule[]> = {
     { when: (d) => d.weatherCode >= 95, penalty: 15, reason: "Thunderstorm risk" },
   ],
   running: [
+    { when: (d) => d.weatherCode === 3, penalty: 2, reason: "Overcast conditions" },
+    { when: (d) => d.precipitationProbability > 10 && d.precipitationProbability <= 35, penalty: 2, reason: "Some rain uncertainty" },
+    { when: (d) => d.windSpeed > 12 && d.windSpeed <= 25, penalty: 2, reason: "Moderate wind" },
     { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 10, reason: "Drizzle risk" },
     { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 20, reason: "Wet running conditions" },
     { when: (d) => d.precipitationProbability > 35, penalty: 15, reason: "Rain is likely" },
@@ -57,6 +65,9 @@ const RULES: Record<Activity, Rule[]> = {
     { when: (d) => d.weatherCode >= 95, penalty: 15, reason: "Thunderstorm risk" },
   ],
   photography: [
+    { when: (d) => d.weatherCode === 3, penalty: 2, reason: "Overcast conditions" },
+    { when: (d) => d.precipitationProbability > 10 && d.precipitationProbability <= 30, penalty: 2, reason: "Some rain uncertainty" },
+    { when: (d) => d.windSpeed > 15 && d.windSpeed <= 30, penalty: 2, reason: "Moderate wind" },
     { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 10, reason: "Drizzle may soften views" },
     { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 20, reason: "Rain may obscure views" },
     { when: (d) => d.precipitationProbability > 30, penalty: 20, reason: "Rain may obscure views" },
@@ -68,6 +79,9 @@ const RULES: Record<Activity, Rule[]> = {
     { when: (d) => d.weatherCode >= 95, penalty: 15, reason: "Thunderstorm risk" },
   ],
   picnic: [
+    { when: (d) => d.weatherCode === 3, penalty: 2, reason: "Overcast conditions" },
+    { when: (d) => d.precipitationProbability > 10 && d.precipitationProbability <= 25, penalty: 2, reason: "Some rain uncertainty" },
+    { when: (d) => d.windSpeed > 10 && d.windSpeed <= 20, penalty: 2, reason: "Moderate wind" },
     { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 20, reason: "Drizzle will dampen plans" },
     { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 30, reason: "Rain will disrupt a picnic" },
     { when: (d) => d.precipitationProbability > 25, penalty: 25, reason: "Rain is likely" },
@@ -91,6 +105,70 @@ export function suitabilityLabel(score: number): SuitabilityLabel {
   return "Poor";
 }
 
+function scoreHour(hour: WeatherHour, activity: Activity) {
+  const matched = RULES[activity].filter((rule) => rule.when({
+    date: hour.time.slice(0, 10),
+    temperatureMax: hour.temperature,
+    temperatureMin: hour.temperature,
+    precipitationProbability: hour.precipitationProbability,
+    precipitationAmount: 0,
+    windSpeed: hour.windSpeed,
+    uvIndex: hour.uvIndex,
+    weatherCode: hour.weatherCode,
+  }));
+  return {
+    score: Math.max(0, Math.min(100, 100 - matched.reduce((sum, rule) => sum + rule.penalty, 0))),
+    reasons: matched.map((rule) => rule.reason),
+  };
+}
+
+function hourLabel(hour: number) {
+  const normalized = hour % 24;
+  const display = normalized % 12 || 12;
+  return `${display} ${normalized >= 12 ? "PM" : "AM"}`;
+}
+
+export function suggestBestTime(hours: WeatherHour[], activity: Activity, sunrise?: string, sunset?: string): BestTimeSuggestion | undefined {
+  const sunriseHour = sunrise ? Number(sunrise.slice(11, 13)) : 6;
+  const sunsetHour = sunset ? Number(sunset.slice(11, 13)) : 19;
+  const daylight = hours.filter((hour) => {
+    const value = Number(hour.time.slice(11, 13));
+    return value >= Math.max(6, sunriseHour) && value <= Math.min(19, sunsetHour);
+  });
+  if (!daylight.length) return undefined;
+
+  const windows = daylight.slice(0, -1).flatMap((start, index) => {
+    const end = daylight[index + 1];
+    const startHour = Number(start.time.slice(11, 13));
+    const endHour = Number(end.time.slice(11, 13));
+    if (endHour - startHour !== 1) return [];
+    const startScore = scoreHour(start, activity);
+    const endScore = scoreHour(end, activity);
+    return [{
+      start,
+      end,
+      score: Math.round((startScore.score + endScore.score) / 2),
+      reasons: [...startScore.reasons, ...endScore.reasons],
+      startHour,
+      endHour,
+    }];
+  });
+  const candidates = windows.length ? windows : daylight.map((hour) => {
+    const score = scoreHour(hour, activity);
+    const startHour = Number(hour.time.slice(11, 13));
+    return { start: hour, end: hour, score: score.score, reasons: score.reasons, startHour, endHour: startHour };
+  });
+  const best = candidates.reduce((current, candidate) => candidate.score > current.score ? candidate : current, candidates[0]);
+  const endHour = best.endHour + 1;
+  return {
+    start: best.start.time,
+    end: best.end.time,
+    label: `${hourLabel(best.startHour)}–${hourLabel(endHour)}`,
+    score: best.score,
+    reason: best.reasons[0] ?? "Best balance of conditions",
+  };
+}
+
 export function scoreDay(day: WeatherDay, activity: Activity): SuitabilityDay {
   const matched = RULES[activity].filter((rule) => rule.when(day));
   const score = Math.max(0, Math.min(100, 100 - matched.reduce((sum, rule) => sum + rule.penalty, 0)));
@@ -103,8 +181,9 @@ export function scoreDay(day: WeatherDay, activity: Activity): SuitabilityDay {
   }
   const label = suitabilityLabel(score);
   const summary = `${weatherLabel(day.weatherCode)} · ${Math.round(day.temperatureMin)}–${Math.round(day.temperatureMax)}°C`;
+  const bestTime = day.hours ? suggestBestTime(day.hours, activity, day.sunrise, day.sunset) : undefined;
 
-  return { ...day, score, label, summary, reasons };
+  return { ...day, score, label, summary, reasons, bestTime };
 }
 
 export function scoreDays(days: WeatherDay[], activity: Activity): SuitabilityDay[] {

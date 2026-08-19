@@ -10,7 +10,7 @@ a { color: inherit; }
 .site-header { height: 82px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .wordmark { font-weight: 700; letter-spacing: -.06em; font-size: 25px; text-decoration: none; display: flex; align-items: center; gap: 9px; }
 .wordmark-dot { width: 11px; height: 11px; display: inline-block; background: var(--accent); border-radius: 50%; box-shadow: 0 0 0 4px var(--ink); margin-left: 4px; }
-.header-note, .site-footer, .eyebrow, .field small, .best-kicker, .activity-stamp, .score-denom, .score-label, .day-date b, .day-detail, .comparison-note, .method-note { font-family: 'DM Mono', monospace; }
+.header-note, .site-footer, .eyebrow, .field small, .best-kicker, .activity-stamp, .score-denom, .score-label, .day-detail, .comparison-note { font-family: 'DM Mono', monospace; }
 .header-note { color: var(--muted); font-size: 11px; letter-spacing: .04em; }
 .intro { min-height: 355px; display: flex; justify-content: space-between; align-items: flex-end; padding: 68px 0 57px; position: relative; }
 .intro-copy { max-width: 720px; position: relative; z-index: 1; }
@@ -73,6 +73,8 @@ h1 em { font-family: 'Libre Baskerville', serif; font-weight: 400; letter-spacin
 .best-kicker { color: var(--accent); font-size: 10px; letter-spacing: .12em; margin-bottom: 17px; }
 .best-date { font: 400 clamp(29px, 4vw, 52px)/1.05 'Libre Baskerville', serif; letter-spacing: -.07em; margin-bottom: 13px; }
 .best-summary { color: #c9d1ce; font-size: 15px; margin-bottom: 23px; }
+.best-time { color: var(--paper); font-size: 15px; display: flex; align-items: baseline; gap: 13px; margin-bottom: 22px; }
+.best-time span { color: var(--accent); font: 10px 'DM Mono', monospace; letter-spacing: .12em; }
 .reason-list { display: flex; flex-wrap: wrap; gap: 9px 18px; color: #b6c4bf; font: 11px 'DM Mono', monospace; }
 .reason-list span:first-child { color: var(--paper); }
 .score-lockup { min-width: 180px; display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: end; }
@@ -90,8 +92,9 @@ h1 em { font-family: 'Libre Baskerville', serif; font-weight: 400; letter-spacin
 .day-date { display: flex; flex-direction: column; gap: 3px; position: relative; }
 .day-date span { font: 11px 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; }
 .day-date strong { font-size: 16px; font-weight: 600; letter-spacing: -.03em; }
-.day-date b { position: absolute; left: 72px; top: 2px; color: #79921b; font-size: 8px; letter-spacing: .08em; }
 .day-weather { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+.day-weather-copy { display: flex; flex-direction: column; gap: 5px; }
+.day-weather-copy small { color: #79921b; font: 10px 'DM Mono', monospace; letter-spacing: .02em; }
 .weather-glyph { font-size: 24px; color: var(--coral); width: 25px; text-align: center; }
 .day-detail { display: flex; gap: 17px; color: var(--muted); font-size: 10px; }
 .day-score { text-align: right; display: flex; flex-direction: column; gap: 4px; }

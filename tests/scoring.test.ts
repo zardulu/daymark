@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickBestDay, scoreDay, scoreDays, suitabilityLabel } from "@/lib/scoring";
+import { pickBestDay, scoreDay, scoreDays, suggestBestTime, suitabilityLabel } from "@/lib/scoring";
 import type { WeatherDay } from "@/lib/types";
 
 const clearDay: WeatherDay = {
@@ -32,7 +32,7 @@ describe("suitability scoring", () => {
   it("applies activity-specific thresholds", () => {
     const breezy = { ...clearDay, windSpeed: 23 };
     expect(scoreDay(breezy, "picnic").score).toBe(80);
-    expect(scoreDay(breezy, "running").score).toBe(100);
+    expect(scoreDay(breezy, "running").score).toBe(98);
   });
 
   it("does not treat drizzle as a perfect picnic day", () => {
@@ -45,6 +45,16 @@ describe("suitability scoring", () => {
   it("uses the earliest day when scores tie", () => {
     const days = scoreDays([clearDay, { ...clearDay, date: "2026-08-21" }], "hiking");
     expect(pickBestDay(days).date).toBe("2026-08-20");
+  });
+
+  it("suggests the strongest two-hour window from hourly conditions", () => {
+    const hours = [
+      { time: "2026-08-20T08:00", temperature: 17, precipitationProbability: 0, windSpeed: 8, uvIndex: 2, weatherCode: 0 },
+      { time: "2026-08-20T09:00", temperature: 19, precipitationProbability: 0, windSpeed: 8, uvIndex: 3, weatherCode: 0 },
+      { time: "2026-08-20T10:00", temperature: 22, precipitationProbability: 80, windSpeed: 8, uvIndex: 4, weatherCode: 63 },
+    ];
+    expect(suggestBestTime(hours, "picnic")).toMatchObject({ label: "8 AM–10 AM", score: 100 });
+    expect(scoreDay({ ...clearDay, hours }, "picnic").bestTime?.label).toBe("8 AM–10 AM");
   });
 
   it("maps score bands to clear labels", () => {

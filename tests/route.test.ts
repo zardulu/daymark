@@ -7,6 +7,14 @@ function response(data: unknown, ok = true, status = 200) {
 }
 
 const forecast = {
+  hourly: {
+    time: ["2026-08-20T08:00", "2026-08-20T09:00", "2026-08-21T08:00", "2026-08-21T09:00"],
+    temperature_2m: [18, 19, 17, 18],
+    precipitation_probability: [0, 0, 60, 60],
+    wind_speed_10m: [8, 8, 9, 9],
+    uv_index: [2, 3, 2, 3],
+    weather_code: [0, 0, 63, 63],
+  },
   daily: {
     time: ["2026-08-20", "2026-08-21"],
     temperature_2m_max: [24, 22],
@@ -62,6 +70,7 @@ describe("POST /api/suitability", () => {
     const body = await result.json();
     expect(body.location).toMatchObject({ name: "Portland", latitude: 45.5 });
     expect(body.bestDay.date).toBe("2026-08-20");
+    expect(body.bestDay.bestTime.label).toBe("8 AM–10 AM");
     expect(body.days).toHaveLength(2);
     expect(body.days[0]).toHaveProperty("reasons");
   });

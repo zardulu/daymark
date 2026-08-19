@@ -1,4 +1,4 @@
-import type { LocationResult, LocationSuggestion, WeatherDay } from "./types";
+import type { LocationResult, LocationSuggestion, WeatherDay, WeatherHour } from "./types";
 
 const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
@@ -91,6 +91,7 @@ export async function getForecast(location: LocationResult, startDate: string, e
   });
   const data = (await fetchJson(`${FORECAST_URL}?${params}`)) as {
     daily?: Record<string, unknown>;
+    hourly?: Record<string, unknown>;
   };
   const daily = data.daily;
   if (!daily || !Array.isArray(daily.time)) {
@@ -109,6 +110,27 @@ export async function getForecast(location: LocationResult, startDate: string, e
   const valid = fields.every((field) => Array.isArray(daily[field]) && (daily[field] as unknown[]).length >= length);
   if (!valid) throw new WeatherProviderError("FORECAST_UNAVAILABLE", "The forecast response was incomplete. Please try again.");
 
+  const hourly = data.hourly;
+  const hoursByDate = new Map<string, WeatherHour[]>();
+  const hourlyFields = ["time", "temperature_2m", "precipitation_probability", "wind_speed_10m", "uv_index", "weather_code"];
+  const hourlyLength = hourly && Array.isArray(hourly.time) ? hourly.time.length : 0;
+  const hasHourly = Boolean(hourly && hourlyLength && hourlyFields.every((field) => Array.isArray(hourly[field]) && (hourly[field] as unknown[]).length >= hourlyLength));
+  if (hasHourly && hourly) {
+    for (let index = 0; index < hourlyLength; index += 1) {
+      const time = String((hourly.time as unknown[])[index]);
+      const hour: WeatherHour = {
+        time,
+        temperature: Number((hourly.temperature_2m as unknown[])[index] ?? 0),
+        precipitationProbability: Number((hourly.precipitation_probability as unknown[])[index] ?? 0),
+        windSpeed: Number((hourly.wind_speed_10m as unknown[])[index] ?? 0),
+        uvIndex: Number((hourly.uv_index as unknown[])[index] ?? 0),
+        weatherCode: Number((hourly.weather_code as unknown[])[index] ?? 0),
+      };
+      const date = time.slice(0, 10);
+      hoursByDate.set(date, [...(hoursByDate.get(date) ?? []), hour]);
+    }
+  }
+
   return daily.time.map((date, index) => ({
     date: String(date),
     temperatureMax: Number((daily.temperature_2m_max as unknown[])[index]),
@@ -120,5 +142,6 @@ export async function getForecast(location: LocationResult, startDate: string, e
     weatherCode: Number((daily.weather_code as unknown[])[index] ?? 0),
     sunrise: Array.isArray(daily.sunrise) ? String((daily.sunrise as unknown[])[index] ?? "") : undefined,
     sunset: Array.isArray(daily.sunset) ? String((daily.sunset as unknown[])[index] ?? "") : undefined,
+    hours: hoursByDate.get(String(date)),
   }));
 }

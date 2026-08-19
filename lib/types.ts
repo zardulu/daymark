@@ -35,6 +35,24 @@ export type WeatherDay = {
   weatherCode: number;
   sunrise?: string;
   sunset?: string;
+  hours?: WeatherHour[];
+};
+
+export type WeatherHour = {
+  time: string;
+  temperature: number;
+  precipitationProbability: number;
+  windSpeed: number;
+  uvIndex: number;
+  weatherCode: number;
+};
+
+export type BestTimeSuggestion = {
+  start: string;
+  end: string;
+  label: string;
+  score: number;
+  reason: string;
 };
 
 export type SuitabilityDay = WeatherDay & {
@@ -42,6 +60,7 @@ export type SuitabilityDay = WeatherDay & {
   label: SuitabilityLabel;
   summary: string;
   reasons: string[];
+  bestTime?: BestTimeSuggestion;
 };
 
 export type SuitabilityReport = {
