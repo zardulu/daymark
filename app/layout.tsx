@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Daymark — Find your best outdoor day",
+  title: "Daymark",
   description: "A transparent seven-day weather suitability guide for outdoor plans.",
 };
 

@@ -35,6 +35,13 @@ describe("suitability scoring", () => {
     expect(scoreDay(breezy, "running").score).toBe(100);
   });
 
+  it("does not treat drizzle as a perfect picnic day", () => {
+    const drizzle = { ...clearDay, weatherCode: 55 };
+    const scored = scoreDay(drizzle, "picnic");
+    expect(scored.score).toBe(80);
+    expect(scored.reasons).toContain("Drizzle will dampen plans");
+  });
+
   it("uses the earliest day when scores tie", () => {
     const days = scoreDays([clearDay, { ...clearDay, date: "2026-08-21" }], "hiking");
     expect(pickBestDay(days).date).toBe("2026-08-20");

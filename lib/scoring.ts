@@ -26,6 +26,8 @@ const WEATHER_NAMES: Record<number, string> = {
   80: "Rain showers",
   81: "Showers",
   82: "Heavy showers",
+  85: "Snow showers",
+  86: "Heavy snow showers",
   95: "Thunderstorms",
   96: "Thunderstorms + hail",
   99: "Thunderstorms + hail",
@@ -33,6 +35,8 @@ const WEATHER_NAMES: Record<number, string> = {
 
 const RULES: Record<Activity, Rule[]> = {
   hiking: [
+    { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 10, reason: "Drizzle risk" },
+    { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 20, reason: "Wet trail conditions" },
     { when: (d) => d.precipitationProbability > 40, penalty: 20, reason: "Rain is likely" },
     { when: (d) => d.precipitationAmount > 3, penalty: 15, reason: "Wet trails possible" },
     { when: (d) => d.windSpeed > 30, penalty: 20, reason: "Strong winds" },
@@ -42,6 +46,8 @@ const RULES: Record<Activity, Rule[]> = {
     { when: (d) => d.weatherCode >= 95, penalty: 15, reason: "Thunderstorm risk" },
   ],
   running: [
+    { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 10, reason: "Drizzle risk" },
+    { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 20, reason: "Wet running conditions" },
     { when: (d) => d.precipitationProbability > 35, penalty: 15, reason: "Rain is likely" },
     { when: (d) => d.precipitationAmount > 2, penalty: 15, reason: "Wet running conditions" },
     { when: (d) => d.windSpeed > 25, penalty: 15, reason: "Headwinds" },
@@ -51,6 +57,8 @@ const RULES: Record<Activity, Rule[]> = {
     { when: (d) => d.weatherCode >= 95, penalty: 15, reason: "Thunderstorm risk" },
   ],
   photography: [
+    { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 10, reason: "Drizzle may soften views" },
+    { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 20, reason: "Rain may obscure views" },
     { when: (d) => d.precipitationProbability > 30, penalty: 20, reason: "Rain may obscure views" },
     { when: (d) => d.precipitationAmount > 2, penalty: 10, reason: "Wet conditions" },
     { when: (d) => d.windSpeed > 30, penalty: 15, reason: "Wind can shake shots" },
@@ -60,6 +68,8 @@ const RULES: Record<Activity, Rule[]> = {
     { when: (d) => d.weatherCode >= 95, penalty: 15, reason: "Thunderstorm risk" },
   ],
   picnic: [
+    { when: (d) => d.weatherCode >= 51 && d.weatherCode <= 55, penalty: 20, reason: "Drizzle will dampen plans" },
+    { when: (d) => (d.weatherCode >= 61 && d.weatherCode <= 82) || (d.weatherCode >= 85 && d.weatherCode <= 86), penalty: 30, reason: "Rain will disrupt a picnic" },
     { when: (d) => d.precipitationProbability > 25, penalty: 25, reason: "Rain is likely" },
     { when: (d) => d.precipitationAmount > 2, penalty: 15, reason: "Ground may be wet" },
     { when: (d) => d.windSpeed > 20, penalty: 20, reason: "Breezy conditions" },
@@ -85,6 +95,12 @@ export function scoreDay(day: WeatherDay, activity: Activity): SuitabilityDay {
   const matched = RULES[activity].filter((rule) => rule.when(day));
   const score = Math.max(0, Math.min(100, 100 - matched.reduce((sum, rule) => sum + rule.penalty, 0)));
   const reasons = matched.map((rule) => rule.reason);
+  if (!reasons.length) {
+    if (day.precipitationProbability <= 10 && day.precipitationAmount === 0) reasons.push("Low rain risk");
+    if (day.windSpeed <= 15) reasons.push("Light wind");
+    if (day.temperatureMin >= 10 && day.temperatureMax <= 30) reasons.push("Comfortable temperatures");
+    if (!reasons.length) reasons.push("No major weather penalties");
+  }
   const label = suitabilityLabel(score);
   const summary = `${weatherLabel(day.weatherCode)} · ${Math.round(day.temperatureMin)}–${Math.round(day.temperatureMax)}°C`;
 

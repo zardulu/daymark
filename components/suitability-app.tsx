@@ -47,6 +47,16 @@ export default function SuitabilityApp() {
   const [report, setReport] = useState<SuitabilityReport | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!report) return;
+    const frame = window.requestAnimationFrame(() => {
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      resultsRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [report]);
 
   useEffect(() => {
     const query = location.trim();
@@ -215,7 +225,7 @@ export default function SuitabilityApp() {
 
       {loading && <section className="loading-state" aria-live="polite"><div className="loading-orb" /><p>Checking the next few days in {location || "your place"}…</p></section>}
 
-      {report && !loading && <Results report={report} />}
+      {report && !loading && <div ref={resultsRef}><Results report={report} /></div>}
 
       {!report && !loading && !error && <section className="empty-state"><div className="empty-icon">✳</div><div><h2>Your forecast, with a point of view.</h2><p>We’ll compare every day in your window and call out the trade-offs, so you can make plans with confidence.</p></div></section>}
 
@@ -230,12 +240,20 @@ function Results({ report }: { report: SuitabilityReport }) {
     <section className="results" aria-labelledby="results-title">
       <div className="results-heading"><div><p className="eyebrow"><span className="eyebrow-line" /> YOUR SEVEN-DAY OUTLOOK</p><h2 id="results-title">{report.location.name}<span>{report.location.country ? `, ${report.location.country}` : ""}</span></h2></div><div className="activity-stamp"><span>{meta.icon}</span>{meta.label}</div></div>
       <div className="best-day">
-        <div className="best-copy"><p className="best-kicker">BEST DAY FOR {meta.label.toUpperCase()}</p><p className="best-date">{formatDate(report.bestDay.date, { weekday: "long", month: "long", day: "numeric" })}</p><p className="best-summary">{report.bestDay.summary}</p><div className="reason-list">{(report.bestDay.reasons.length ? report.bestDay.reasons : ["A balanced forecast", "Comfortable conditions"]).map((reason) => <span key={reason}>+ {reason}</span>)}</div></div>
+        <div className="best-copy"><p className="best-kicker">BEST DAY FOR {meta.label.toUpperCase()}</p><p className="best-date">{formatDate(report.bestDay.date, { weekday: "long", month: "long", day: "numeric" })}</p><p className="best-summary">{report.bestDay.summary}</p><div className="reason-list">{report.bestDay.reasons.map((reason) => <span key={reason}>+ {reason}</span>)}</div></div>
         <div className="score-lockup"><span className="score-number">{report.bestDay.score}</span><span className="score-denom">/ 100</span><span className={`score-label ${report.bestDay.label.toLowerCase()}`}>{report.bestDay.label}</span></div>
       </div>
       <div className="comparison-heading"><div><p className="eyebrow"><span className="eyebrow-line" /> DAILY COMPARISON</p><h3>How the rest of the window looks</h3></div><p className="comparison-note">Scored for {meta.label.toLowerCase()}<br />Updated just now</p></div>
       <div className="day-list">{report.days.map((day, index) => <DayRow key={day.date} day={day} best={day.date === report.bestDay.date} index={index} />)}</div>
-      <p className="method-note" id="method">Each score is a transparent blend of rain risk, temperature, wind, UV, and weather code thresholds tuned for {meta.label.toLowerCase()}. <a href="#method">How it works ↗</a></p>
+      <section className="methodology" id="methodology" aria-label="How the score works">
+        <p className="eyebrow"><span className="eyebrow-line" /> HOW THE SCORE WORKS</p>
+        <p>Every day starts at 100. We subtract points when the forecast crosses an activity-specific threshold, then label the result: Excellent (80+), Good (60–79), Fair (40–59), or Poor (below 40).</p>
+        <div className="method-grid">
+          <div><strong>Rain &amp; weather codes</strong><span>Probability, amount, drizzle, showers, snow, and thunderstorms.</span></div>
+          <div><strong>Comfort</strong><span>Temperature range, wind speed, and UV exposure.</span></div>
+          <div><strong>Recommendation</strong><span>The highest score wins; ties go to the earliest day.</span></div>
+        </div>
+      </section>
     </section>
   );
 }
