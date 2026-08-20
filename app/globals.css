@@ -27,11 +27,11 @@ h1 em { font-family: 'Libre Baskerville', serif; font-weight: 400; letter-spacin
 .section-label > span:first-child { color: var(--coral); font: 12px 'DM Mono', monospace; }
 .section-label h2 { margin: 0; font-size: 21px; letter-spacing: -.04em; }
 .label-rule { width: 100%; height: 1px; background: var(--line); }
-.planner-form { display: grid; grid-template-columns: 1.6fr 1.2fr 1.4fr 1.05fr; gap: 22px; align-items: end; }
+.planner-form { display: grid; grid-template-columns: 1.6fr 1.2fr 1.4fr 1.05fr; gap: 22px; align-items: start; }
 .field { display: block; min-width: 0; }
 .location-control { position: relative; }
 .field > span { font-size: 13px; font-weight: 600; display: block; margin-bottom: 10px; }
-.field input, .field select { border: 0; border-bottom: 1px solid #8a9592; border-radius: 0; background: transparent; color: var(--ink); width: 100%; padding: 0 22px 12px 0; font: 16px 'DM Sans', sans-serif; outline: none; appearance: none; }
+.field input, .field select { display: block; height: 34px; border: 0; border-bottom: 1px solid #8a9592; border-radius: 0; background: transparent; color: var(--ink); width: 100%; padding: 0 22px 12px 0; font: 16px/20px 'DM Sans', sans-serif; outline: none; appearance: none; }
 .field select { background: linear-gradient(45deg, transparent 50%, var(--ink) 50%) calc(100% - 7px) 7px / 6px 6px no-repeat, linear-gradient(135deg, var(--ink) 50%, transparent 50%) calc(100% - 2px) 7px / 6px 6px no-repeat; }
 .field input:focus, .field select:focus { border-color: var(--coral); }
 .field small { display: block; color: var(--muted); font-size: 10px; margin-top: 9px; letter-spacing: .02em; }
@@ -44,9 +44,10 @@ h1 em { font-family: 'Libre Baskerville', serif; font-weight: 400; letter-spacin
 .suggestions-status { padding: 15px 14px; color: var(--muted); font: 10px 'DM Mono', monospace; display: flex; align-items: center; gap: 8px; }
 .mini-spinner { width: 11px; height: 11px; border: 1px solid var(--line); border-top-color: var(--coral); border-radius: 50%; animation: spin .8s linear infinite; }
 .date-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
-.submit-button { align-self: start; margin-top: 12px; border: 0; background: var(--ink); color: var(--paper); min-height: 51px; padding: 0 18px; font: 500 13px 'DM Mono', monospace; cursor: pointer; transition: background .2s, transform .2s; }
+.submit-button { align-self: start; margin-top: 0; border: 0; background: var(--ink); color: var(--paper); min-height: 51px; padding: 0 18px; font: 500 13px 'DM Mono', monospace; cursor: pointer; transition: background .2s, transform .2s; }
 .submit-button:hover { background: #29424a; transform: translateY(-2px); }
-.submit-button:disabled { opacity: .7; cursor: wait; transform: none; }
+.submit-button:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+.submit-button.is-loading:disabled { opacity: .7; cursor: wait; }
 .submit-button span:last-child { color: var(--accent); font-size: 19px; vertical-align: -2px; margin-left: 8px; }
 .spinner { display: inline-block; width: 13px; height: 13px; margin-right: 8px; border: 1px solid rgba(244,241,233,.35); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }

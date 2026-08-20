@@ -3,6 +3,11 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { Activity, ErrorResponse, LocationSuggestion, SuitabilityReport } from "@/lib/types";
 
+const DAY_IN_MS = 86_400_000;
+const API_FORECAST_DAYS = 16;
+const MAX_RANGE_DAYS = 7;
+const RANGE_TOO_LONG_MESSAGE = "Choose a date range of seven days or fewer.";
+
 const ACTIVITY_META: Record<Activity, { label: string; icon: string; description: string }> = {
   hiking: { label: "Hiking", icon: "↗", description: "Trails, elevation, and long daylight" },
   running: { label: "Running", icon: "→", description: "A steady route with a comfortable pace" },
@@ -11,7 +16,30 @@ const ACTIVITY_META: Record<Activity, { label: string; icon: string; description
 };
 
 function isoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function dateTimestamp(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return Number.NaN;
+  const [year, month, day] = value.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function addDateValue(value: string, days: number) {
+  const timestamp = dateTimestamp(value);
+  if (!Number.isFinite(timestamp)) return "";
+  const result = new Date(timestamp);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
 }
 
 function formatDate(value: string, options: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" }) {
@@ -43,11 +71,32 @@ export default function SuitabilityApp() {
   const suggestionRequest = useRef<AbortController | null>(null);
   const [activity, setActivity] = useState<Activity>("hiking");
   const [startDate, setStartDate] = useState(isoDate(today));
-  const [endDate, setEndDate] = useState(isoDate(new Date(today.getTime() + 6 * 86_400_000)));
+  const [endDate, setEndDate] = useState(isoDate(addDays(today, MAX_RANGE_DAYS - 1)));
   const [report, setReport] = useState<SuitabilityReport | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const resultsRef = useRef<HTMLDivElement | null>(null);
+  const minApiDate = isoDate(today);
+  const maxApiDate = isoDate(addDays(today, API_FORECAST_DAYS - 1));
+  const maxToDate = useMemo(() => {
+    const sevenDayMax = addDateValue(startDate, MAX_RANGE_DAYS - 1);
+    if (!sevenDayMax) return maxApiDate;
+    return dateTimestamp(sevenDayMax) < dateTimestamp(maxApiDate) ? sevenDayMax : maxApiDate;
+  }, [maxApiDate, startDate]);
+  const dateRangeMessage = useMemo(() => {
+    if (!startDate || !endDate) return "";
+
+    const start = dateTimestamp(startDate);
+    const end = dateTimestamp(endDate);
+    const min = dateTimestamp(minApiDate);
+    const max = dateTimestamp(maxApiDate);
+    if (![start, end, min, max].every(Number.isFinite)) return "";
+    if (end < start) return "The end date must be on or after the start date.";
+    if (start < min || start > max || end < min || end > max) return "Choose dates within the available forecast window.";
+
+    const dayCount = Math.round((end - start) / DAY_IN_MS) + 1;
+    return dayCount > MAX_RANGE_DAYS ? RANGE_TOO_LONG_MESSAGE : "";
+  }, [endDate, maxApiDate, minApiDate, startDate]);
 
   useEffect(() => {
     if (!report) return;
@@ -127,6 +176,7 @@ export default function SuitabilityApp() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (dateRangeMessage) return;
     setLoading(true);
     setError("");
     setReport(null);
@@ -215,12 +265,12 @@ export default function SuitabilityApp() {
             <small>{ACTIVITY_META[activity].description}</small>
           </label>
           <div className="date-fields">
-            <label className="field"><span>From</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required /><small>Start date</small></label>
-            <label className="field"><span>To</span><input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} required /><small>Up to 7 days</small></label>
+            <label className="field"><span>From</span><input type="date" value={startDate} min={minApiDate} max={maxApiDate} aria-invalid={Boolean(dateRangeMessage)} onChange={(event) => { setStartDate(event.target.value); setError(""); }} required /></label>
+            <label className="field"><span>To</span><input type="date" value={endDate} min={startDate || minApiDate} max={maxToDate} aria-invalid={Boolean(dateRangeMessage)} onChange={(event) => { setEndDate(event.target.value); setError(""); }} required /></label>
           </div>
-          <button className="submit-button" type="submit" disabled={loading}>{loading ? <><span className="spinner" /> Reading the sky…</> : <>Find my best day <span>↗</span></>}</button>
+          <button className={`submit-button ${loading ? "is-loading" : ""}`} type="submit" disabled={loading || Boolean(dateRangeMessage)}>{loading ? <><span className="spinner" /> Reading the sky…</> : <>Find my best day <span>↗</span></>}</button>
         </form>
-        {error && <div className="error-message" role="alert"><span>!</span>{error}</div>}
+        {(dateRangeMessage || error) && <div className="error-message" role="alert"><span>!</span>{dateRangeMessage || error}</div>}
       </section>
 
       {loading && <section className="loading-state" aria-live="polite"><div className="loading-orb" /><p>Checking the next few days in {location || "your place"}…</p></section>}

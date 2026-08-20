@@ -74,6 +74,7 @@ export async function getForecast(location: LocationResult, startDate: string, e
     latitude: String(location.latitude),
     longitude: String(location.longitude),
     timezone: "auto",
+    forecast_days: "16",
     start_date: startDate,
     end_date: endDate,
     daily: [
