@@ -10,6 +10,8 @@ function errorResponse(code: string, message: string, status: number) {
   return NextResponse.json(body, { status });
 }
 
+const API_FORECAST_DAYS = 16;
+
 function isDate(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
@@ -32,6 +34,10 @@ function parseRequest(body: unknown): SuitabilityRequest | ErrorResponse {
   const dayCount = Math.round((end - start) / 86_400_000) + 1;
   if (dayCount < 1) return { error: { code: "INVALID_RANGE", message: "The end date must be on or after the start date." } };
   if (dayCount > 7) return { error: { code: "RANGE_TOO_LONG", message: "Choose a date range of seven days or fewer." } };
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const maxForecastMs = today.getTime() + API_FORECAST_DAYS * 86_400_000;
+  if (end >= maxForecastMs) return { error: { code: "DATE_OUT_OF_RANGE", message: "Dates must be within the next 16-day forecast window." } };
   return { location, activity: input.activity.toLowerCase() as Activity, startDate: input.startDate, endDate: input.endDate };
 }
 
